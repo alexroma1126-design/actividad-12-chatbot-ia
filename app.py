@@ -403,10 +403,49 @@ def get_api_key(st) -> str | None:
         return None
 
 
+
+def render_math_markdown(text: str) -> str:
+    """Prepara ecuaciones LaTeX para Streamlit/KaTeX."""
+    parts = re.split(
+        r"(```[\s\S]*?```|`[^`\n]+`)",
+        str(text)
+    )
+
+    for i in range(0, len(parts), 2):
+        chunk = parts[i]
+
+        # $$ formula $$ en una sola linea
+        chunk = re.sub(
+            r"(?<!\\)\$\$\s*([\s\S]*?)\s*\$\$",
+            lambda m: "\n\n$$\n" + m.group(1).strip()
+                      + "\n$$\n\n",
+            chunk
+        )
+
+        # \[ formula \] -> ecuacion centrada
+        chunk = re.sub(
+            r"\\\[\s*([\s\S]*?)\s*\\\]",
+            lambda m: "\n\n$$\n" + m.group(1).strip()
+                      + "\n$$\n\n",
+            chunk
+        )
+
+        # \( formula \) -> ecuacion en linea
+        chunk = re.sub(
+            r"\\\(\s*([\s\S]*?)\s*\\\)",
+            lambda m: "$" + m.group(1).strip() + "$",
+            chunk
+        )
+
+        parts[i] = chunk
+
+    return "".join(parts)
+
+
 def display_history(st, key: str) -> None:
     for msg in st.session_state.get(key, []):
         with st.chat_message(msg["role"]):
-            st.markdown(msg["text"])
+            st.markdown(render_math_markdown(msg["text"]))
             if "table" in msg:
                 st.dataframe(msg["table"], use_container_width=True, hide_index=True)
             if "sql" in msg:
@@ -475,14 +514,14 @@ def main() -> None:
                         completion = client.chat.completions.create(
                             model=MODEL,
                             messages=[
-                                {"role": "system", "content": "Eres un asistente educativo. Responde en español, de forma clara y precisa."},
+                                {"role": "system", "content": "Eres un asistente educativo. Responde en español, de forma clara y precisa. Cuando escribas formulas matematicas, utiliza LaTeX compatible con Streamlit. Usa $...$ para expresiones en linea y $$...$$ en lineas separadas para ecuaciones centradas. No uses bloques de codigo para representar ecuaciones. Explica los pasos de los calculos."},
                                 *history,
                             ],
                             max_completion_tokens=1200,
                             extra_body={"reasoning_effort": "low"},
                         )
                         answer = completion.choices[0].message.content or "No se obtuvo respuesta."
-                    st.write(answer)
+                    st.markdown(render_math_markdown(answer))
                 st.session_state["chat_general"].append({"role": "assistant", "text": answer})
             except Exception as exc:
                 st.error(explain_api_error(exc))
@@ -545,7 +584,7 @@ def main() -> None:
                                     "sql": sql
                                 }
 
-                    st.markdown(response_item["text"])
+                    st.markdown(render_math_markdown(response_item["text"]))
                     if "table" in response_item:
                         st.dataframe(response_item["table"], use_container_width=True, hide_index=True)
                         if "sql" in response_item:
