@@ -1,0 +1,616 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- PAQUETES ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{listings}
+
+% ---------- ESTILO ----------
+\geometry{margin=2.4cm}
+
+\definecolor{azul}{RGB}{19,53,92}
+\definecolor{gris}{RGB}{85,95,110}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=azul,
+    urlcolor=azul,
+    pdftitle={Actividad 12 - Informe tecnico},
+    pdfauthor={Hector Alexander Roman Potosi}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Actividad 12 -- Fundamentos de IA}
+\fancyhead[R]{\small Maestría en Ciencia de Datos}
+\fancyfoot[C]{\thepage}
+
+\setlength{\headheight}{15pt}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+
+\setlist[itemize]{leftmargin=*,itemsep=2pt}
+
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!6},
+    showstringspaces=false,
+    columns=fullflexible
+}
+
+\newcommand{\repositorio}{
+https://github.com/alexroma1126-design/actividad-12-chatbot-ia
+}
+
+\begin{document}
+
+% ======================================================
+% PORTADA
+% ======================================================
+
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{center}
+
+\vspace*{1cm}
+
+{\color{azul}\rule{\textwidth}{1.2pt}}\\[0.8cm]
+
+{\Large\bfseries
+Universidad de Investigación de Tecnología Experimental Yachay
+}\\[0.35cm]
+
+{\large Maestría en Ciencia de Datos}\\[1.5cm]
+
+{\color{azul}\LARGE\bfseries INFORME TÉCNICO}\\[0.45cm]
+
+{\Huge\bfseries Actividad 12}\\[0.45cm]
+
+{\Large
+Chatbot con GPT-OSS, GroqCloud, Streamlit
+y análisis de archivos CSV
+}\\[0.8cm]
+
+{\color{azul}\rule{0.78\textwidth}{0.8pt}}\\[1.5cm]
+
+\begin{tabular}{@{}rl@{}}
+\textbf{Asignatura:} & Fundamentos de Inteligencia Artificial\\
+\textbf{Autor:} & Héctor Alexander Román Potosí\\
+\textbf{Docente:} & Manuel Eugenio Morocho Cayamcela, PhD\\
+\textbf{Fecha:} & 15 de noviembre de 2026\\
+\textbf{Rama revisada:} & \texttt{main}\\
+\textbf{Commit revisado:} & \texttt{4522728}\\
+\end{tabular}
+
+\vfill
+
+\textbf{Repositorio público}\\[3mm]
+
+\href{
+https://github.com/alexroma1126-design/actividad-12-chatbot-ia
+}{
+\texttt{github.com/alexroma1126-design/actividad-12-chatbot-ia}
+}\\[0.8cm]
+
+{\small\color{gris}
+Informe basado en el código publicado y
+en la consigna del notebook de clase.
+}
+
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ======================================================
+\section{Resumen}
+% ======================================================
+
+Se desarrolló una aplicación web educativa con dos modos
+de funcionamiento: conversación general en español y
+consultas en lenguaje natural sobre archivos CSV.
+
+La interfaz se implementó utilizando \textbf{Streamlit},
+mientras que el procesamiento de datos se realizó mediante
+\textbf{Pandas} y \textbf{SQLite en memoria}.
+
+Para interpretar preguntas se empleó el modelo abierto
+\texttt{openai/gpt-oss-20b}, desarrollado por OpenAI y
+servido mediante \textbf{GroqCloud}.
+
+La comunicación con el modelo utiliza el SDK de OpenAI
+configurado con una URL compatible de Groq. Por tanto,
+no es necesario consumir créditos de la API comercial
+de OpenAI para realizar esta práctica.
+
+El servicio gratuito de GroqCloud está sujeto a límites
+de solicitudes y procesamiento.
+
+El proyecto dispone de un repositorio público en GitHub
+que contiene el código fuente, documentación,
+un dataset de ejemplo y pruebas automatizadas.
+
+El despliegue público en Streamlit Community Cloud
+continúa pendiente de verificación.
+
+% ======================================================
+\section{Objetivos y relación con la consigna}
+% ======================================================
+
+La actividad propuesta en el notebook de la asignatura
+se denomina:
+
+\emph{Building a Simple Chatbot with Streamlit and
+Hugging Face or OpenAI Models}.
+
+La consigna establece la creación de una aplicación
+que acepte preguntas, permita cargar archivos CSV,
+responda sobre los datos y rechace consultas
+ajenas al conjunto cargado.
+
+Asimismo, solicita entregar el archivo Python
+y el enlace público de la aplicación desplegada
+en Streamlit Cloud, además de presentar los resultados
+brevemente durante la clase.
+
+\subsection{Objetivo general}
+
+Desarrollar un chatbot interactivo que integre
+inteligencia artificial generativa y cálculos
+reproducibles para responder preguntas sobre
+conjuntos de datos CSV desde una interfaz web.
+
+\subsection{Objetivos específicos}
+
+\begin{itemize}
+\item Desarrollar una interfaz conversacional con Streamlit.
+\item Integrar GPT-OSS mediante GroqCloud.
+\item Transformar preguntas en consultas de solo lectura.
+\item Analizar registros, columnas y estadísticas básicas.
+\item Proteger las credenciales privadas del proveedor.
+\item Documentar pruebas, resultados y limitaciones.
+\item Publicar el código mediante GitHub.
+\end{itemize}
+
+% ======================================================
+\section{Arquitectura de la solución}
+% ======================================================
+
+\subsection{Componentes tecnológicos}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Componentes verificados en el repositorio.}
+
+\begin{tabularx}{\textwidth}{@{}p{3cm}X@{}}
+\toprule
+\textbf{Componente} & \textbf{Responsabilidad}\\
+\midrule
+
+Python y Streamlit &
+Interfaz web, conversación, carga y vista previa de archivos.\\
+
+GPT-OSS 20B &
+Comprensión del lenguaje natural y planificación de SQL.\\
+
+GroqCloud &
+Servicio de inferencia remota con cuota gratuita limitada.\\
+
+SDK \texttt{openai} &
+Cliente compatible con la API de Groq.\\
+
+Pandas &
+Lectura del CSV y operaciones descriptivas.\\
+
+SQLite &
+Consultas sobre tablas temporales en memoria.\\
+
+\texttt{unittest} &
+Pruebas de carga, cálculos, restricciones y errores.\\
+
+GitHub &
+Versionado y publicación del código fuente.\\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Flujo de procesamiento}
+
+\begin{center}
+\fbox{
+\begin{minipage}{0.91\textwidth}
+\centering
+
+\textbf{Usuario: pregunta o archivo CSV}\\[2mm]
+
+$\downarrow$\\
+
+\textbf{Interfaz Streamlit}\\[2mm]
+
+\textbf{Chat general:}\\
+GPT-OSS $\rightarrow$ respuesta en español\\[3mm]
+
+\textbf{Modo CSV:}\\
+Pandas carga el archivo y describe su esquema\\[2mm]
+
+$\downarrow$\\
+
+Preguntas simples $\rightarrow$ Pandas\\
+
+Preguntas analíticas $\rightarrow$ GPT-OSS propone SQL\\[2mm]
+
+$\downarrow$\\
+
+\textbf{SQLite calcula el resultado}\\
+
+$\downarrow$\\
+
+\textbf{Streamlit presenta la respuesta y la tabla}
+
+\end{minipage}
+}
+\end{center}
+
+La separación entre interpretación lingüística
+y cálculo numérico permite obtener resultados
+que pueden contrastarse directamente con los datos.
+
+Sin embargo, el modelo puede generar una consulta
+SQL incorrecta. Por ello, los resultados deben
+validarse frente al dataset original.
+
+\subsection{Estructura del repositorio}
+
+La organización del proyecto publicado es:
+
+\begin{lstlisting}
+actividad-12-chatbot-ia/
+  app.py
+  README.md
+  requirements.txt
+  .gitignore
+  .streamlit/secrets.toml.example
+  datos/clientes_ejemplo.csv
+  tests/test_app.py
+\end{lstlisting}
+
+% ======================================================
+\section{Implementación y seguridad}
+% ======================================================
+
+La aplicación dispone de dos modalidades principales.
+
+\subsection{Chat general}
+
+Permite ingresar preguntas abiertas en español
+y recibir respuestas generadas por GPT-OSS.
+
+El historial de conversación se mantiene durante
+la sesión de Streamlit.
+
+\subsection{Preguntas sobre un CSV}
+
+El usuario carga un archivo CSV y la aplicación
+muestra una vista previa de sus registros.
+
+El archivo se procesa mediante Pandas.
+
+La aplicación puede responder directamente preguntas
+sobre cantidad de registros, columnas y valores
+mínimos o máximos.
+
+Para consultas analíticas, el modelo interpreta
+la pregunta y propone una sentencia SQL que
+posteriormente se ejecuta mediante SQLite.
+
+El límite de tamaño establecido para archivos
+es de \textbf{3 MB}.
+
+La cantidad máxima de filas mostradas por consulta
+es de \textbf{100 registros}.
+
+\subsection{Restricciones de seguridad}
+
+El código exige consultas SQL de tipo
+\texttt{SELECT} y utiliza un autorizador de SQLite
+para limitar las operaciones permitidas.
+
+Las consultas se ejecutan sobre la tabla temporal
+\texttt{datos}, evitando modificaciones a
+archivos externos.
+
+La credencial privada se recupera desde la variable
+\texttt{GROQ\_API\_KEY} o los secretos de Streamlit.
+
+El archivo privado \texttt{.streamlit/secrets.toml}
+se encuentra excluido mediante \texttt{.gitignore}
+y no aparece en el árbol publicado del repositorio.
+
+Estas medidas son apropiadas para una demostración
+educativa, aunque no reemplazan una auditoría
+integral de seguridad.
+
+El esquema y algunas categorías del CSV se envían
+al proveedor para interpretar consultas.
+
+Por ello, no deben utilizarse datos personales
+ni información sensible sin la autorización
+correspondiente.
+
+% ======================================================
+\section{Datos de prueba y verificación}
+% ======================================================
+
+\subsection{Dataset de ejemplo publicado}
+
+El archivo \texttt{datos/clientes\_ejemplo.csv}
+incluido en GitHub contiene \textbf{20 registros}
+y cinco columnas:
+
+\begin{itemize}
+\item \texttt{ClienteID}
+\item \texttt{Genero}
+\item \texttt{Edad}
+\item \texttt{IngresoAnualUSD}
+\item \texttt{PuntuacionGasto}
+\end{itemize}
+
+Los resultados de referencia se presentan
+en la Tabla siguiente.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Resultados verificables del CSV de ejemplo.}
+
+\begin{tabularx}{\textwidth}{@{}Xr@{}}
+\toprule
+\textbf{Indicador} & \textbf{Resultado}\\
+\midrule
+Número de registros & 20\\
+Número de columnas & 5\\
+Registros con género F & 10\\
+Registros con género M & 10\\
+Promedio de edad & 33,45\\
+Edad mínima & 19\\
+Edad máxima & 51\\
+Ingreso anual máximo (USD) & 48\,000\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Durante las pruebas locales también se utilizó
+otro dataset relacionado con diabetes,
+con \textbf{768 registros y 9 columnas}.
+
+Ese dataset corresponde a una prueba distinta
+y no es el archivo de clientes publicado
+en el repositorio de GitHub.
+
+\subsection{Pruebas automatizadas}
+
+El archivo \texttt{tests/test\_app.py}
+contiene \textbf{11 métodos de prueba} relacionados con:
+
+\begin{itemize}
+\item Lectura y validación de archivos CSV.
+\item Conteo de filas.
+\item Agrupaciones.
+\item Cálculo de promedios.
+\item Rechazo de instrucciones SQL no autorizadas.
+\item Interpretación simulada de preguntas fuera de contexto.
+\item Manejo de errores de autenticación y cuotas.
+\end{itemize}
+
+Algunas pruebas utilizan un cliente ficticio
+y no realizan solicitudes reales a Groq.
+
+La revisión del repositorio confirma la existencia
+de estas pruebas, pero no equivale a una ejecución
+reciente de integración continua.
+
+\subsection{Matriz de aceptación}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Casos recomendados para la demostración.}
+
+\begin{tabularx}{\textwidth}{@{}p{5.3cm}X@{}}
+\toprule
+\textbf{Pregunta o prueba} &
+\textbf{Resultado esperado}\\
+\midrule
+
+Saludo en chat general &
+Respuesta en español mediante GPT-OSS.\\
+
+¿Cuántos registros tiene el CSV? &
+20 registros.\\
+
+¿Cuáles son las columnas? &
+Listado de cinco encabezados.\\
+
+¿Cuál es el promedio de Edad? &
+33,45 o su redondeo explícito.\\
+
+¿Cuántos registros hay por género? &
+F: 10; M: 10.\\
+
+¿Cuál es la capital de Francia? (modo CSV) &
+Rechazo por estar fuera del dataset.\\
+
+Intento de SQL de escritura &
+Operación bloqueada.\\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ======================================================
+\section{Limitaciones y trabajo pendiente}
+% ======================================================
+
+\begin{itemize}
+
+\item El modelo puede rechazar consultas válidas
+o producir SQL incorrecto.
+
+\item Las definiciones de columnas son orientativas
+y no sustituyen el diccionario original de datos.
+
+\item El plan gratuito de Groq está sujeto
+a límites de uso.
+
+\item Una aplicación pública puede recibir solicitudes
+que consuman la cuota disponible.
+
+\item Las pruebas publicadas todavía no cubren
+todas las variantes de preguntas sobre columnas
+y extremos numéricos.
+
+\item Falta verificar el despliegue público en
+Streamlit Community Cloud.
+
+\item Es recomendable adjuntar capturas de las
+pruebas finales sin exponer credenciales.
+
+\end{itemize}
+
+% ======================================================
+\section{Reproducibilidad y enlaces}
+% ======================================================
+
+\subsection{Ejecución local}
+
+Desde la carpeta raíz del proyecto se utilizan
+los siguientes comandos:
+
+\begin{lstlisting}
+python -m pip install -r requirements.txt
+python -m unittest discover -s tests -v
+python -m streamlit run app.py
+\end{lstlisting}
+
+La aplicación se abre localmente en:
+
+\url{http://localhost:8501}
+
+La clave privada se configura mediante
+\texttt{GROQ\_API\_KEY}.
+
+Nunca debe incorporarse al informe,
+al repositorio público ni a las capturas.
+
+\subsection{Despliegue en Streamlit Cloud}
+
+Para completar la publicación se debe:
+
+\begin{enumerate}
+\item Conectar el repositorio de GitHub.
+\item Seleccionar la rama \texttt{main}.
+\item Establecer \texttt{app.py} como archivo principal.
+\item Configurar la clave privada en los secretos de Streamlit.
+\item Publicar la aplicación.
+\item Comprobar ambos modos de funcionamiento.
+\end{enumerate}
+
+La plataforma de despliegue es:
+
+\url{https://share.streamlit.io}
+
+\subsection{Enlaces del proyecto}
+
+\begin{tabularx}{\textwidth}{@{}p{3cm}X@{}}
+\toprule
+\textbf{Recurso} & \textbf{Enlace o estado}\\
+\midrule
+
+Repositorio GitHub &
+\url{https://github.com/alexroma1126-design/actividad-12-chatbot-ia}\\
+
+Código Python &
+\url{https://github.com/alexroma1126-design/actividad-12-chatbot-ia/blob/main/app.py}\\
+
+Commit revisado &
+\texttt{4522728} (rama \texttt{main})\\
+
+App pública Streamlit &
+\textbf{Pendiente de desplegar o verificar.}\\
+
+\bottomrule
+\end{tabularx}
+
+% ======================================================
+\section{Conclusiones}
+% ======================================================
+
+Se implementó un chatbot híbrido que combina
+inteligencia artificial generativa y procesamiento
+tabular mediante herramientas de Python.
+
+GPT-OSS interpreta las preguntas, mientras
+que Pandas y SQLite permiten realizar operaciones
+sobre los datos cargados.
+
+Esta arquitectura mejora la verificabilidad
+de los resultados frente a un chatbot
+que responde utilizando únicamente texto generado.
+
+El proyecto dispone de código fuente público,
+documentación, pruebas definidas y mecanismos
+básicos de protección de credenciales.
+
+GroqCloud permitió ejecutar un modelo abierto
+de OpenAI sin consumir créditos de la API comercial
+de OpenAI, aunque mantiene restricciones de uso.
+
+Para cumplir completamente los entregables
+de la asignatura, es indispensable verificar
+la publicación en Streamlit Community Cloud
+y entregar su enlace junto con \texttt{app.py}
+mediante Moodle.
+
+% ======================================================
+\section*{Referencias}
+\addcontentsline{toc}{section}{Referencias}
+% ======================================================
+
+\begin{enumerate}
+
+\item Morocho Cayamcela, M. E. (2026).
+\emph{OpenAI API}.
+Notebook de Fundamentos de Inteligencia Artificial,
+actividad final.
+
+\item Román Potosí, H. A. (2026).
+\emph{Actividad 12: Chatbot GPT-OSS con Groq y Streamlit}.
+\url{https://github.com/alexroma1126-design/actividad-12-chatbot-ia}.
+
+\item Groq.
+\emph{Documentación del modelo GPT-OSS 20B}.
+\url{https://console.groq.com/docs/model/openai/gpt-oss-20b}.
+
+\item Streamlit.
+\emph{Community Cloud: desplegar aplicaciones}.
+\url{https://docs.streamlit.io/deploy/streamlit-community-cloud}.
+
+\end{enumerate}
+
+\end{document}
